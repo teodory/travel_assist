@@ -7,6 +7,13 @@ from travel_assist_app.models import User, Country, Place, City, PlacesList
 UserModel = get_user_model()
 
 
+class PlacesListSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = PlacesList
+        fields = "__all__"
+
+
 class UserSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(
         validators=[UniqueValidator(UserModel.objects.all())]
@@ -15,6 +22,7 @@ class UserSerializer(serializers.ModelSerializer):
         min_length=4,
         write_only=True
     )
+    places_list = serializers.PrimaryKeyRelatedField(required=False, allow_null=True, many=True, read_only=True)
 
     def create(self, validated_data):
         fields = ['username', 'password', 'email']
@@ -25,7 +33,8 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserModel
-        fields = ('id', 'username', 'email', 'password')
+        fields = ('id', 'username', 'email', 'password', 'places_list')
+        # fields = '__all__'
 
     def update(self, instance, validated_data):
         instance.first_name = validated_data.get('first_name', instance.first_name)
@@ -52,18 +61,19 @@ class CitySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = City
-        fields = ['name']
+        fields = "__all__"
 
 
 class PlaceSerializer(serializers.ModelSerializer):
+    name = serializers.CharField(required=True)
+    website = serializers.CharField(required=False)
+    price = serializers.CharField(required=False)
+    work_hours = serializers.CharField(required=False)
+    location = serializers.CharField(required=False)
+    description = serializers.CharField(required=False)
 
     class Meta:
         model = Place
         fields = "__all__"
 
 
-class PlacesListSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = PlacesList
-        fields = "__all__"

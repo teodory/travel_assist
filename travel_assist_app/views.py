@@ -35,6 +35,12 @@ class ViewCountries(APIView):
         countries_serializer = CountrySerializer(countries_query, many=True)
         return Response(countries_serializer.data)
 
+    def post(self, request):
+        country_serializer = CountrySerializer(data=request.data)
+        if country_serializer.is_valid():
+            return Response(country_serializer.data, HTTP_201_CREATED)
+        return Response({}, HTTP_400_BAD_REQUEST)
+
 
 class ViewCities(APIView):
 
@@ -45,7 +51,30 @@ class ViewCities(APIView):
         return Response(cities_serializer.data)
 
 
-class ViewPlaces(APIView):
+# class CreateCity(APIView):
+class CreateCity(generics.CreateAPIView):
+    queryset = City.objects.all()
+    serializer_class = CitySerializer
+
+    # def post(self, request):
+    #     # {"name": "Turnovo", "country_id": 2}
+    #     country = Country.objects.get(id=request.data['country_id'])
+    #     if country:
+    #         city_serializer = CitySerializer(data={
+    #             'name': request.data['name'],
+    #             'country_id': request.data['country_id'],
+    #             'country': request.data['country_id'],
+    #         })
+    #
+    #         if city_serializer.is_valid():
+    #             city_serializer.save()
+    #             return Response(city_serializer.data, HTTP_201_CREATED)
+    #     return Response({}, HTTP_400_BAD_REQUEST)
+
+
+class ViewPlaces(generics.GenericAPIView):
+    queryset = Place.objects.all()
+    serializer_class = PlaceSerializer
 
     def get(self, request, country, city):
         country = Country.objects.get(name=country)
@@ -54,6 +83,49 @@ class ViewPlaces(APIView):
         places_serializer = PlaceSerializer(places, many=True)
 
         return Response(places_serializer.data, HTTP_200_OK)
+
+
+class ViewPlace(APIView):
+
+    def get(self, request, id):
+        place = Place.objects.filter(id=id)
+        place_serializer = PlaceSerializer(place, many=True)
+        return Response(place_serializer.data, HTTP_200_OK)
+
+    def delete(self, request, id):
+        place = Place.objects.filter(id=id)
+        if place:
+            place.delete()
+            return Response({}, HTTP_204_NO_CONTENT)
+        return Response({}, HTTP_400_BAD_REQUEST)
+
+    def put(self, request, id):
+        print("\n", request.data, id, '\n')
+        country = Country.objects.get(name=request.data['country'])
+        city = City.objects.get(name=request.data['city'], country=country)
+        place = Place.objects.get(city=city, id=id)
+        # place.update(description=request.data['description'])
+        return HttpResponseRedirect({}, HTTP_205_RESET_CONTENT)
+
+
+class CreatePlace(generics.CreateAPIView):
+    queryset = Place.objects.all()
+    serializer_class = PlaceSerializer
+
+    # def post(self, request):
+    #     print(request.data)
+    #     city = City.objects.filter(id=request.data['city_id'])
+    #     if city:
+    #         data = {
+    #             "name": request.data['name'],
+    #             "city": request.data['city_id']
+    #         }
+    #
+    #         place_serializer = PlaceSerializer(data=data)
+    #         if place_serializer.is_valid(raise_exception=True):
+    #             place_serializer.save()
+    #             return Response(place_serializer.data, HTTP_201_CREATED)
+    #     return Response({}, HTTP_400_BAD_REQUEST)
 
 
 class ViewUserLists(LoginRequiredMixin, APIView):
@@ -97,9 +169,20 @@ class ViewUserList(LoginRequiredMixin, APIView):
 
         return Response({}, HTTP_400_BAD_REQUEST)
 
-    def post(self, request):
-        # TODO place_id -> insert place
+    def post(self, request, list_id):
+        user = UserModel.objects.get(username=request.user)
+        if 'place_id' in request.data:
+            place = Place.objects.get(id=request.data['place_id'])
+            places_list = PlacesList.objects.get_or_create(list_id=list_id, user=user, places=place)
+
+            if places_list[1]:
+                return HttpResponseRedirect(redirect_to='user_list/{0}/'.format(list_id))
+        return Response({"Place already in the list!"}, HTTP_400_BAD_REQUEST)
         pass
+
+    def put(self, request, list_id):
+        # TODO place_id -> insert place
+        return Response({})
 
     def delete(self, request, list_id):
         places = PlacesList.objects.filter(list_id=list_id).delete()

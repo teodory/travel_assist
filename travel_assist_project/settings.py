@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'travel_assist_app',
     # 'travel_assist_project.travel_assist_app',
     'rest_framework',
+    'rest_framework_swagger',
 ]
 
 MIDDLEWARE = [

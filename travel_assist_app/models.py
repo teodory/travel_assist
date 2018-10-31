@@ -7,10 +7,13 @@ from django.contrib.auth.models import AbstractUser, AnonymousUser
 class Country(models.Model):
     name = models.CharField(max_length=100, null=False)
 
+    def __str__(self):
+        return "{0}".format(self.name)
+
 
 class City(models.Model):
     name = models.CharField(max_length=50, null=False)
-    country = models.ForeignKey(to=Country, on_delete=models.CASCADE)
+    country = models.ForeignKey(to=Country, on_delete=models.CASCADE, null=False)
 
     def __str__(self):
         return "{0}, {1}".format(self.name, self.country)
@@ -29,10 +32,16 @@ class Place(models.Model):
         return "{0}".format(self.name)
 
 
+class PlacesList(models.Model):
+    list_id = models.PositiveIntegerField(primary_key=False, null=False)
+    # id = models.PositiveIntegerField(unique=False, null=False)
+    places = models.ForeignKey(to=Place)
+
+
 # class User(models.Model):
 # class User(AnonymousUser):
 class User(AbstractUser):
-    pass
+    places_list = models.ForeignKey(to=PlacesList, on_delete=models.CASCADE, null=True)
 
     # # def get_by_natural_key(self, username):
     # #     return self.get(**{self.model.USERNAME_FIELD: username})
@@ -54,10 +63,6 @@ class User(AbstractUser):
     # #     return "{0} {1}".format(self.first_name, self.last_name)
 
 
-class PlacesList(models.Model):
-    list_id = models.PositiveIntegerField(primary_key=False, null=False)
-    places = models.ForeignKey(to=Place, on_delete=models.CASCADE)
-    user = models.ForeignKey(to=User, on_delete=models.CASCADE)
 
 
 # class CustomUserAdmin(UserAdmin):
