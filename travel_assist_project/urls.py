@@ -35,8 +35,9 @@ urlpatterns = [
     url(r'^place/(?P<id>[\d]+)/', app_views.ViewPlace.as_view(), name='single_place'),
     url(r'^place/$', app_views.CreatePlace.as_view(), name='create_place'),
 
-    url(r'user_lists/$', app_views.ViewUserLists.as_view(), name='user_lists'),
-    url(r'user_list/(?P<list_id>[0-9]+)/$', app_views.ViewUserList.as_view(), name='user_list_by_id'),
+    url(r'places_lists/$', app_views.CreatePlacesList.as_view(), name='create_places_list'),
+    url(r'my_lists/$', app_views.ViewUserLists.as_view(), name='user_lists'),
+    url(r'my_lists/(?P<list_id>[0-9]+)/$', app_views.ViewUserList.as_view(), name='user_list_by_id'),
 
     url(r'^signup/', app_views.SignupUser.as_view(), name='signup'),
     url(r'^auth/', include('rest_framework.urls')),

@@ -128,12 +128,14 @@ class CreatePlace(generics.CreateAPIView):
     #     return Response({}, HTTP_400_BAD_REQUEST)
 
 
-class ViewUserLists(LoginRequiredMixin, APIView):
+class ViewUserLists(LoginRequiredMixin, generics.ListAPIView):
+    serializer_class = PlacesListSerializer
+    queryset = PlacesList.objects.all()
 
     login_url = '/signup/'
     redirect_field_name = 'redirect_to'
 
-    def get(self, request):
+    def get(self, request, **kwargs):
         user = UserModel.objects.get(username=request.user)
         places_list = PlacesList.objects.filter(user=user)
         places_list_serializer = PlacesListSerializer(places_list, many=True)
@@ -141,44 +143,72 @@ class ViewUserLists(LoginRequiredMixin, APIView):
 
     def post(self, request):
         user = UserModel.objects.get(username=request.user)
+        data = {"user": user, "name": request.data['name']}
+        places_list_serializer = PlacesListSerializer(data=data)
 
-        if 'list_id' in request.data:
-            list_id = request.data['list_id']
-        else:
-            list_id = PlacesList.objects.all().aggregate(Max('list_id'))['list_id__max'] + 1
+        if places_list_serializer.is_valid():
+            places_list = PlacesList(**data)
+            places_list.save()
 
-        if 'place_id' in request.data:
-            place = Place.objects.get(id=request.data['place_id'])
-            places_list = PlacesList.objects.get_or_create(list_id=list_id, user=user, places=place)
+            return Response(places_list_serializer.data, HTTP_201_CREATED)
 
-            if places_list[1]:
-                return HttpResponseRedirect(redirect_to='user_list/{0}/'.format(list_id))
-        return Response({"Place already in the list!"}, HTTP_400_BAD_REQUEST)
+        return Response({}, HTTP_400_BAD_REQUEST)
+
+    # def post(self, request):
+    #     user = UserModel.objects.get(username=request.user)
+    #
+    #     if 'list_id' in request.data:
+    #         list_id = request.data['list_id']
+    #     else:
+    #         list_id = PlacesList.objects.all().aggregate(Max('list_id'))['list_id__max'] + 1
+    #
+    #     if 'place_id' in request.data:
+    #         place = Place.objects.get(id=request.data['place_id'])
+    #         places_list = PlacesList.objects.get_or_create(list_id=list_id, user=user, places=place)
+    #
+    #         if places_list[1]:
+    #             return HttpResponseRedirect(redirect_to='user_list/{0}/'.format(list_id))
+    #     return Response({"Place already in the list!"}, HTTP_400_BAD_REQUEST)
 
 
-class ViewUserList(LoginRequiredMixin, APIView):
+class CreatePlacesList(LoginRequiredMixin, generics.ListAPIView):
+    serializer_class = PlacesListSerializer
+    queryset = PlacesList.objects.all()
+
+
+class ViewUserList(LoginRequiredMixin, generics.GenericAPIView):
     login_url = '/signup/'
     redirect_field_name = 'redirect_to'
 
+    serializer_class = PlacesListSerializer
+    queryset = PlacesList.objects.all()
+
     def get(self, request, list_id):
         if list_id:
-            user_places_list = PlacesList.objects.filter(list_id=list_id)
-            places_list = [user_place.places for user_place in user_places_list]
-            places = PlaceSerializer(places_list, many=True)
-            return Response(places.data)
+            user_places_list = PlacesList.objects.get(id=list_id)
+            places = PlaceSerializer(instance=user_places_list.places, many=True)
+            return Response(places.data, HTTP_200_OK)
+            # place_list_ser = PlacesListSerializer(instance=user_places_list)
+            # print("\nHERE", place_list_ser.data)
+            # return Response(place_list_ser.data, HTTP_200_OK)
 
         return Response({}, HTTP_400_BAD_REQUEST)
 
     def post(self, request, list_id):
         user = UserModel.objects.get(username=request.user)
-        if 'place_id' in request.data:
-            place = Place.objects.get(id=request.data['place_id'])
-            places_list = PlacesList.objects.get_or_create(list_id=list_id, user=user, places=place)
+        places_list = PlacesList.objects.get_or_create(name=request.data['name'], user=user)[0]
 
-            if places_list[1]:
-                return HttpResponseRedirect(redirect_to='user_list/{0}/'.format(list_id))
-        return Response({"Place already in the list!"}, HTTP_400_BAD_REQUEST)
-        pass
+        if 'places' in request.data:
+            place = Place.objects.get(id=request.data['places'])
+            if place in places_list.places.all():
+                return Response({"Place already in the list!"}, HTTP_400_BAD_REQUEST)
+            places_list.places.add(place)
+            # places_list = PlacesList.objects.get_or_create(list_id=list_id, user=user, places=place)
+            return HttpResponseRedirect(redirect_to='/my_lists/{0}'.format(list_id))
+
+        if places_list:
+            return HttpResponseRedirect(redirect_to='/my_lists/{0}'.format(list_id))
+        return Response({}, HTTP_400_BAD_REQUEST)
 
     def put(self, request, list_id):
         # TODO place_id -> insert place
